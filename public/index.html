@@ -3,6 +3,8 @@
 <link rel="stylesheet" type="text/css" href="trcgrid.css">
 
 <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="fdepy1la7v40fut"></script>
+
 <script src="bundle.js"></script>
 <script>
     // plugin startup shim
@@ -38,6 +40,30 @@
         });
     }
 </script>
+
+<script>
+    $(function () {
+        options = {
+            success: function (files) {
+                var downloadLink = files[0].link;                
+                var sname = $("#_name").val();
+
+                _plugin.onUpload(downloadLink, sname);
+            },
+
+            cancel: function () {
+            },
+
+            linkType: "preview", // direct
+            multiselect: false,
+            extensions: ['.txt', '.csv']
+        };
+
+        var button = Dropbox.createChooseButton(options);
+        document.getElementById("container").appendChild(button);
+    });
+</script>
+
 <script src="https://trcanvasdata.blob.core.windows.net/code2/plugin.js"></script>
 
 <html lang="en">
@@ -55,31 +81,22 @@
         <button onclick="clearError()">Clear error</button>
     </span>
     <div id="_mainbody"  style="display:none">
-        <p>
-            This is an empty TRC plugin that demonstrates calling PluginMain().
-        </p>
-        <p>
-            See <a href="https://github.com/Voter-Science/TrcLibNpm">https://github.com/Voter-Science/TrcLibNpm</a> for more information on writing plugions.
-        </p>
-
-        <h2>Basic sheet information:</h2>
-        <table>
-            <tr><td>Name:</td><td><div id="SheetName"></div></td></tr>
-            <tr><td>Parent:</td><td><div id="ParentSheetName"></div></td></tr>
-            <tr><td>Version:</td><td><div id="SheetVer"></div></td></tr>
-            <tr><td>Total Rows:</td><td><div id="RowCount"></div></td></tr>
-            <tr><td>Last refreshed:</td><td><div id="LastRefreshed"></div></td></tr>
-        </table> 
-        <div id="locInfo">
+       
+        <p>Upload a new semantic</p>
+        <div class="row">    
+            <div class="col-md-8">
+                <div id="container"></div>
+            </div>
         </div>
+        <input type="text" id="_name" placeholder="name">
 
-        <button onclick="_plugin.onClickRefresh()">Refresh!</button>
+        <p>Semantics used in this sheet:</p>
+        <ul id="_list"></ul>
 
-        <button onclick="_plugin.onGetSheetContents()">GetSheetContents!</button>
-        <div id="contents">
-
-        <p>Congratulations! You made your first TRC plugin!</p>
-        </div>
+        <p>Semantics I have access to:</p>
+        <select id="_semantics">            
+        </select>
+              
     </div>
 </body>
 </html>
