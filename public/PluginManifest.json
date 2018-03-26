@@ -3,7 +3,7 @@
     "Id": "DataUploader",
     "Name": "Upload Data",
     "Author" :  "Voter-Science",
-    "Website" :  "https://github.com/Voter-Science/TRC-API-Samples",
+    "Website" :  "https://github.com/Voter-Science/DataUploader",
     "Description": "Upload your own data to the server. These can then be added as read-only columns to your sheets.",        
     "Version": "1.0.0", // User SemVer
     "Tags": [ "data", "upload", "manage"  ]

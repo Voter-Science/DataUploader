@@ -74,15 +74,13 @@ export class MyPlugin {
         return descr.StatusCode + "," + descr.LastRefreshError;
     }
 
-    private pauseUi(): void 
-    {
+    private pauseUi(): void {
         $("#_banner").show();
-        $("#_editor").hide();        
+        $("#_editor").hide();
     }
-    private resumeUi(): void 
-    {
+    private resumeUi(): void {
         $("#_banner").hide();
-        $("#_editor").show();        
+        $("#_editor").show();
     }
     private InitAsync(): Promise<void> {
         this.pauseUi();
@@ -90,7 +88,7 @@ export class MyPlugin {
         var admin = new trcSheet.SheetAdminClient(this._sheet);
         return admin.WaitAsync().then(() => {
             this.resumeUi();
-            
+
             // Name, #, "Used in this sheet?", Status,  Ops [Refresh, Delete, Add to this sheet ]
 
             var used: any = {}; // Semantic --> Column in this sheet that uses it. 
@@ -144,60 +142,61 @@ export class MyPlugin {
                     var countAdd = 0;
                     // $$$  Sort alphabetically? 
                     for (var i in values) {
-                        var descr = values[i];
+                        var descr2 = values[i];
 
-                        var sname = descr.Name;
+                        ((descr) => {
+                            var sname = descr.Name;
 
-                        var row = $("<tr>");
-                        var c1 = $("<td>").text(sname);
-                        var c2 = $("<td>").text(descr.NumberRows);
-                        var c3 = $("<td>").text(this.getStatusText(descr));
+                            var row = $("<tr>");
+                            var c1 = $("<td>").text(sname);
+                            var c2 = $("<td>").text(descr.NumberRows);
+                            var c3 = $("<td>").text(this.getStatusText(descr));
 
-                        var usedBycolumnName = used[descr.Name];
-                        if (!!usedBycolumnName) {
-                            var c4 = $("<td>").text("(included as " + usedBycolumnName + ")");
-                        } else {
-                            // Create a checkbox for adding... 
-                            // var c4 = $("<td>").text("Add it!");
+                            var usedBycolumnName = used[descr.Name];
+                            if (!!usedBycolumnName) {
+                                var c4 = $("<td>").text("(included as " + usedBycolumnName + ")");
+                            } else {
+                                // Create a checkbox for adding... 
+                                // var c4 = $("<td>").text("Add it!");
 
-                            var chk = $("<input class='myx' type='checkbox' />").val(sname).text('Add');
+                                var chk = $("<input class='myx' type='checkbox' />").val(sname).text('Add');
 
-                            var c4 = $("<td>");
-                            c4.append(chk);
-                            countAdd++;
-                        }
+                                var c4 = $("<td>");
+                                c4.append(chk);
+                                countAdd++;
+                            }
 
-                        var btn = $("<button/>").addClass("btn").text("Refresh").click(() => {
-                            this._sc.postRefreshAsync(sname).then(() => {
-                                // Loop until 200? 
-                                return this.InitAsync();
-                            }).catch(showError);
-                        });
-                        var btn2 = $("<button/>").addClass("btn").addClass("btn-danger").text("Delete").click(() => {
-                            var r = confirm("Are you sure you want to delete: " + sname);
-                            if (r == true) {
-                                this._sc.deleteAsync(sname).then(() => {
+                            var btn = $("<button/>").addClass("btn").text("Refresh").click(() => {
+                                this._sc.postRefreshAsync(sname).then(() => {
                                     // Loop until 200? 
                                     return this.InitAsync();
                                 }).catch(showError);
-                            }
-                        });
-                        var c5 = $("<td>");
-                        c5.append(btn);
-                        c5.append(btn2);
+                            });
+                            var btn2 = $("<button/>").addClass("btn").addClass("btn-danger").text("Delete").click(() => {
+                                var r = confirm("Are you sure you want to delete: " + sname);
+                                if (r == true) {
+                                    this._sc.deleteAsync(sname).then(() => {
+                                        // Loop until 200? 
+                                        return this.InitAsync();
+                                    }).catch(showError);
+                                }
+                            });
+                            var c5 = $("<td>");
+                            c5.append(btn);
+                            c5.append(btn2);
 
 
-                        row.append(c1);
-                        row.append(c2);
-                        row.append(c3);
-                        row.append(c4);
-                        row.append(c5);
-                        root.append(row);
+                            row.append(c1);
+                            row.append(c2);
+                            row.append(c3);
+                            row.append(c4);
+                            row.append(c5);
+                            root.append(row);
+                        })(descr2);
                     }
 
 
-                    if (countAdd == 0)
-                    {
+                    if (countAdd == 0) {
                         $("#_addToSheet").hide();
                     }
                 });
@@ -270,19 +269,19 @@ export class MyPlugin {
         var admin = new trcSheet.SheetAdminClient(this._sheet);
 
         admin.postOpAddQuestionAsync(questions).then(
-            () => {                
+            () => {
                 return this.InitAsync();
             }
         ).catch(showError);
     }
 
-    public onRefresh() : void {
-        var admin = new trcSheet.SheetAdminClient(this._sheet);        
-                admin.postOpRefreshAsync().then(
-                    () => {                
-                        return this.InitAsync();
-                    }
-                ).catch(showError);
+    public onRefresh(): void {
+        var admin = new trcSheet.SheetAdminClient(this._sheet);
+        admin.postOpRefreshAsync().then(
+            () => {
+                return this.InitAsync();
+            }
+        ).catch(showError);
     }
 
     // Display sheet info on HTML page
