@@ -1,10 +1,10 @@
 ﻿{
     // ID must be unique on the gallery
-    "Id": "PluginTemplate",
-    "Name": "An empty plugin",
+    "Id": "DataUploader",
+    "Name": "Upload Data",
     "Author" :  "Voter-Science",
     "Website" :  "https://github.com/Voter-Science/TRC-API-Samples",
-    "Description": "An empty plugin that just gets the initial login and shows basic sheet properties.",        
+    "Description": "Upload your own data to the server. These can then be added as read-only columns to your sheets.",        
     "Version": "1.0.0", // User SemVer
-    "Tags": [ "demo"  ]
+    "Tags": [ "data", "upload", "manage"  ]
 }

@@ -1,15 +1,17 @@
 ﻿<!DOCTYPE html>
 
 <link rel="stylesheet" type="text/css" href="trcgrid.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
 <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="fdepy1la7v40fut"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
 <script src="bundle.js"></script>
 <script>
     // plugin startup shim
     var _pluginModule = require('pluginmain');
-    
+
     // Global reference to the current sheet;
     var _plugin = null;
 
@@ -24,53 +26,32 @@
     }
 
     // This is a well-known entry point. It's called by the hosting infrastructure.
-    function PluginMain(sheetRef, opts) {                
+    function PluginMain(sheetRef, opts) {
 
         _pluginModule.MyPlugin.BrowserEntryAsync(sheetRef, opts).then(
-            function(plugin) {
+            function (plugin) {
                 // Success 
-                _plugin = plugin;            
-                $("#_loadingmsg").hide();  
+                _plugin = plugin;
+                $("#_loadingmsg").hide();
                 $("#_mainbody").show(); // activate main controls
             }
-        ).catch(function(error) {
+        ).catch(function (error) {
             // Error case. Display message and Keep main body hiden. 
-            $("#_loadingmsg").hide();  
+            $("#_loadingmsg").hide();
             showError(error);
         });
     }
 </script>
 
-<script>
-    $(function () {
-        options = {
-            success: function (files) {
-                var downloadLink = files[0].link;                
-                var sname = $("#_name").val();
-
-                _plugin.onUpload(downloadLink, sname);
-            },
-
-            cancel: function () {
-            },
-
-            linkType: "preview", // direct
-            multiselect: false,
-            extensions: ['.txt', '.csv']
-        };
-
-        var button = Dropbox.createChooseButton(options);
-        document.getElementById("container").appendChild(button);
-    });
-</script>
-
 <script src="https://trcanvasdata.blob.core.windows.net/code2/plugin.js"></script>
 
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <title>Basic TRC plugin</title>
 </head>
+
 <body>
     <div id="_loadingmsg">
         <img src="https://trcanvasdata.blob.core.windows.net/code2/loading.gif">
@@ -80,23 +61,67 @@
     <span id="_errorbtn" style="display:none">
         <button onclick="clearError()">Clear error</button>
     </span>
-    <div id="_mainbody"  style="display:none">
-       
-        <p>Upload a new semantic</p>
-        <div class="row">    
-            <div class="col-md-8">
-                <div id="container"></div>
+    <div id="_mainbody" style="display:none">
+
+
+        <div id="_editor" class="container">
+            
+            <h3>Data Uploader</h3>
+            <p>This plugin lets you upload your own custom data into your sandbox.</p>
+
+                    <p>A 'semantic' is just a column of data you have stored on the server. There are two forms:</p>
+                    <ul>
+                        <li>A single column as a set of record ids. For example, a list of who has voted.</li>
+                        <li>Two columns, the first column is a set of record ids and the second column is a data value.</li>
+                    </ul>
+                    <p>In both cases, the server will do the join between the sheet and the semantic and extract just the subset
+                        of data used by the sheet.</p>
+                        <p>A single semantic can be shared across many sheets.</p>
+            
+
+            <div class="panel panel-default">
+                <div class="panel-heading">Upload a new semantic</div>
+                <div class="panel-body">
+                    <p>Upload a new semantic from your dropbox.</p>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div id="dropboxButton"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <div id = "_panel2" class="panel panel-default">
+                <div class="panel-heading">Existing Semantics</div>                
+                <div class="panel-body">
+                    <p>Here is a table of all semantics you have access to. You can add these semantics into the current sheet. </p>
+                    <table id="_list" class="table table-hover"></table>
+
+                    <span id="_addToSheet">
+                        <p>To add semantics from above to the current sheet, please mark the checkbox and click add:</p>
+                        <p><button onclick="_plugin.onAddToSheet()" class="btn btn-default">Add to sheet</button></p>
+                    </span>
+                </div>
+            </div>
+
+            <div class="panel panel-default">
+                    <div class="panel-heading">Refresh</div>                
+                    <div class="panel-body">
+                        <p>Forcibly refresh the current sheet to update to the latest semantics. This can take a few minutes.</p>
+                        <table id="_list" class="table table-hover"></table>
+    
+
+                        <p><button onclick="_plugin.onRefresh()" class="btn btn-default">Refresh</button></p>
+                        
+                    </div>
+                </div>
         </div>
-        <input type="text" id="_name" placeholder="name">
+        <div id="_banner" class="alert alert-info">
+                Update in progress - please wait
+        </div>
 
-        <p>Semantics used in this sheet:</p>
-        <ul id="_list"></ul>
 
-        <p>Semantics I have access to:</p>
-        <select id="_semantics">            
-        </select>
-              
     </div>
 </body>
+
 </html>
