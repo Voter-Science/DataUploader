@@ -23,6 +23,9 @@ import * as trchtml from 'trc-web/html'
 // requires tsconfig: "allowSyntheticDefaultImports" : true 
 declare var $: JQueryStatic;
 
+declare var Dropbox: any; // from dropbox inport 
+
+
 // Provide easy error handle for reporting errors from promises.  Usage:
 //   p.catch(showError);
 declare var showError: (error: any) => void; // error handler defined in index.html
@@ -48,12 +51,32 @@ export class MyPlugin {
         plugin2._sc = new trcCompute.SemanticClient(pluginClient.HttpClient);
 
         return plugin2.InitAsync().then(() => {
+            plugin2.InitDropbox();
             if (throwError) {
                 throw "some error";
             }
 
             return plugin2;
         });
+    }
+
+    private InitDropbox() : void {
+          // Setup dropbox button 
+          var options = {
+            success: (files: any) => {
+                var downloadLink = files[0].link;
+                this.onUpload(downloadLink);
+            },
+
+            cancel: () => { },
+
+            linkType: "direct", // direct, preview
+            multiselect: false,
+            extensions: ['.txt', '.csv']
+        };
+
+        var button = Dropbox.createChooseButton(options);
+        document.getElementById("dropboxButton").appendChild(button);
     }
 
     // Expose constructor directly for tests. They can pass in mock versions. 
@@ -294,26 +317,3 @@ export class MyPlugin {
         $("#LastRefreshed").text(new Date().toLocaleString());
     }
 }
-
-declare var _plugin: MyPlugin;
-declare var Dropbox: any; // from dropbox inport 
-
-$(function () {
-    // Setup dropbox button 
-    var options = {
-        success: function (files: any) {
-            var downloadLink = files[0].link;
-            _plugin.onUpload(downloadLink);
-        },
-
-        cancel: function () {
-        },
-
-        linkType: "direct", // direct, preview
-        multiselect: false,
-        extensions: ['.txt', '.csv']
-    };
-
-    var button = Dropbox.createChooseButton(options);
-    document.getElementById("dropboxButton").appendChild(button);
-});
