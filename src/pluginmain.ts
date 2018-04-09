@@ -18,6 +18,8 @@ import * as trcCompute from 'trc-sheet/computeClient'
 import * as plugin from 'trc-web/plugin'
 import * as trchtml from 'trc-web/html'
 
+import * as ago from './ago'
+
 // Installed via:
 //   npm install --save-dev @types/jquery
 // requires tsconfig: "allowSyntheticDefaultImports" : true 
@@ -86,15 +88,15 @@ export class MyPlugin {
 
     private getStatusText(descr: trcCompute.ISemanticDescrFull): string {
         if (!!descr.LastRefreshError) {
-            return "Error: " + descr.LastRefreshError;
+            return "Error!!: " + ago.formatDateTime(descr.LastRefreshError);
         }
         if (descr.StatusCode == 200) {
-            return "Ok -" + descr.LastRefresh;
+            return "Last updated " + ago.formatDateTime(descr.LastRefresh);
         }
         if (descr.StatusCode == 201) {
             return "Upload in progress";
         }
-        return descr.StatusCode + "," + descr.LastRefreshError;
+        return descr.StatusCode + "," + ago.formatDateTime(descr.LastRefreshError);
     }
 
     private pauseUi(): void {
@@ -121,8 +123,8 @@ export class MyPlugin {
             {
                 var header = $("<thead>");
                 var h1 = $("<tr>");
-                var c1 = $("<td>").text("Name");
-                var c2 = $("<td>").text("#");
+                var c1 = $("<td>").text("Full Name");
+                var c2 = $("<td>").text("# Rows");
                 var c3 = $("<td>").text("Status");
                 var c4 = $("<td>").text("Add to sheet?");
                 var c5 = $("<td>").text("Ops");
