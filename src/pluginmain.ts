@@ -174,7 +174,7 @@ export class MyPlugin {
 
                             var row = $("<tr>");
                             var c1 = $("<td>").text(sname);
-                            var c2 = $("<td>").text(descr.NumberRows);
+                            var c2 = $("<td>").text(descr.NumberRows.toLocaleString());
                             var c3 = $("<td>").text(this.getStatusText(descr));
 
                             var usedBycolumnName = used[descr.Name];

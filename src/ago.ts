@@ -1,11 +1,11 @@
 
-function plural(singularPhrase :string, pluralPhrase : string, count : number) : string {
+function plural(singularPhrase: string, pluralPhrase: string, count: number): string {
     return count === 1
         ? singularPhrase
-        : pluralPhrase.replace(/\{0\}/g, <any> count);
+        : pluralPhrase.replace(/\{0\}/g, <any>count);
 }
 
-export function toDateTime(dateTime : any) : Date {
+export function toDateTime(dateTime: any): Date {
     if (dateTime instanceof Date) {
         return dateTime;
     }
@@ -17,7 +17,7 @@ export function toDateTime(dateTime : any) : Date {
     }
     return dateTime;
 }
-export function formatTimeSpan(timeSpan:any) {
+export function formatTimeSpan(timeSpan: any) {
     var totalSeconds = timeSpan / 1000;
     var totalMinutes = totalSeconds / 60;
     var totalHours = totalMinutes / 60;
@@ -47,37 +47,42 @@ export function formatTimeSpan(timeSpan:any) {
     return "less than 1ms";
 }
 
-export function formatDateTime(dateTime : any) {
-    dateTime = toDateTime(dateTime);
-    var now = new Date();
-    var time = <any> now - dateTime;
+export function formatDateTime(dateTime: any) {
+    try {
+        dateTime = toDateTime(dateTime);
+        var now = new Date();
+        var time = <any>now - dateTime;
 
-    var totalSeconds = time / 1000;
-    var totalMinutes = totalSeconds / 60;
-    var totalHours = totalMinutes / 60;
-    var totalDays = totalHours / 24;
-    if (totalDays > 6.5 || totalDays < -6.5)
-        return dateTime.toLocaleDateString() + ' ' + dateTime.toLocaleTimeString();
-    if (totalHours > 24)
-        return plural("1 day ago", "{0} days ago", Math.round(totalDays));
-    if (totalHours < -24)
-        return plural("in 1 day", "in {0} days", 0 - Math.round(totalDays));
-    if (totalMinutes > 60)
-        return plural("1 hour ago", "{0} hours ago", Math.round(totalHours));
-    if (totalMinutes < -60)
-        return plural("in 1 hour", "in {0} hours", 0 - Math.round(totalHours));
+        var totalSeconds = time / 1000;
+        var totalMinutes = totalSeconds / 60;
+        var totalHours = totalMinutes / 60;
+        var totalDays = totalHours / 24;
+        if (totalDays > 6.5 || totalDays < -6.5)
+            return dateTime.toLocaleDateString() + ' ' + dateTime.toLocaleTimeString();
+        if (totalHours > 24)
+            return plural("1 day ago", "{0} days ago", Math.round(totalDays));
+        if (totalHours < -24)
+            return plural("in 1 day", "in {0} days", 0 - Math.round(totalDays));
+        if (totalMinutes > 60)
+            return plural("1 hour ago", "{0} hours ago", Math.round(totalHours));
+        if (totalMinutes < -60)
+            return plural("in 1 hour", "in {0} hours", 0 - Math.round(totalHours));
 
-    if (totalSeconds > 60)
-        return plural("1 minute ago", "{0} minutes ago", Math.round(totalMinutes));
-    if (totalSeconds < -60)
-        return plural("in 1 minute", "in {0} minutes", 0 - Math.round(totalMinutes));
+        if (totalSeconds > 60)
+            return plural("1 minute ago", "{0} minutes ago", Math.round(totalMinutes));
+        if (totalSeconds < -60)
+            return plural("in 1 minute", "in {0} minutes", 0 - Math.round(totalMinutes));
 
-    if (totalSeconds > 10)
-        return plural("1 second ago", "{0} seconds ago", Math.round(totalSeconds)); //aware that the singular won't be used
-    if (totalSeconds < -10)
-        return plural("in 1 second", "in {0} seconds", 0 - Math.round(totalSeconds));
+        if (totalSeconds > 10)
+            return plural("1 second ago", "{0} seconds ago", Math.round(totalSeconds)); //aware that the singular won't be used
+        if (totalSeconds < -10)
+            return plural("in 1 second", "in {0} seconds", 0 - Math.round(totalSeconds));
 
-    return time > 0
-        ? "a moment ago"
-        : "in a moment";
+        return time > 0
+            ? "a moment ago"
+            : "in a moment";
+    }
+    catch {
+        return "???"; // error case. 
+    }
 }
