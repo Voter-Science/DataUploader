@@ -72,7 +72,9 @@ export class MyPlugin {
 
             cancel: () => { },
 
-            linkType: "direct", // direct, preview
+            // Direct expires
+            // Preview does not. 
+            linkType: "preview", // direct, preview
             multiselect: false,
             extensions: ['.txt', '.csv']
         };
@@ -88,7 +90,7 @@ export class MyPlugin {
 
     private getStatusText(descr: trcCompute.ISemanticDescrFull): string {
         if (!!descr.LastRefreshError) {
-            return "Error!!: " + ago.formatDateTime(descr.LastRefreshError);
+            return "Error!!: " + descr.LastRefreshError;
         }
         if (descr.StatusCode == 200) {
             return "Last updated " + ago.formatDateTime(descr.LastRefresh);
@@ -174,7 +176,7 @@ export class MyPlugin {
 
                             var row = $("<tr>");
                             var c1 = $("<td>").text(sname);
-                            var c2 = $("<td>").text(descr.NumberRows.toLocaleString());
+                            var c2 = $("<td>").text(this.SafeToString(descr.NumberRows));
                             var c3 = $("<td>").text(this.getStatusText(descr));
 
                             var usedBycolumnName = used[descr.Name];
@@ -231,6 +233,16 @@ export class MyPlugin {
 
     // When they uploaded from the dropbox selector. 
     public onUpload(url: string): void {
+        // https://www.dropbox.com/developers/chooser
+        // "Direct" links - you can do a GET and get the contents, but they expire after 4 hours. 
+        // Need a "preview" link, which will return a 302 (and do an auth check), 
+        // and the new URL will get the contents 
+        
+        // DL=0 means preview, DL=1 will get a direct link 
+        
+        // Change the dl=0  to dl=1  
+        url = url.replace("dl=0", "dl=1");
+
         var name = prompt("Name of data file? [a-z0-9_]?");
         if (name == null) {
             return; // cancelled. 
@@ -263,6 +275,18 @@ export class MyPlugin {
         // Take the last section 'test1'
         var parts = sname.split('/');
         var last = parts[parts.length - 1];
+
+
+        // If this is voted, then use well-k
+        if (last.indexOf("voted") !== -1)
+        {
+            var msg = "Do you want to use '" + last + "' as list of who has voted? (This will rename the column to 'XVoted') ";
+            if (confirm(msg))
+            {
+                // Use special column name
+                last = "XVoted";
+            }        
+        }
         return last;
     }
     public onAddToSheet(): void {
@@ -307,6 +331,15 @@ export class MyPlugin {
                 return this.InitAsync();
             }
         ).catch(showError);
+    }
+
+    private SafeToString(val : any) : string 
+    {
+        if (!val) 
+        {
+            return "n/a";
+        }
+        return val.toLocaleString();
     }
 
     // Display sheet info on HTML page
