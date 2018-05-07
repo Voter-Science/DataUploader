@@ -67,7 +67,14 @@ export class MyPlugin {
           var options = {
             success: (files: any) => {
                 var downloadLink = files[0].link;
-                this.onUpload(downloadLink);
+
+                // On Chrome, current page is not "active tab", since the dropbox chooser dialog 
+                // is still considered active when this callback is fired. 
+                // https://www.chromestatus.com/feature/5637107137642496
+                // So use a timer to def the dialog a second so that Dropbox window has closed. 
+                setTimeout ( ()=> {
+                    this.onUpload(downloadLink);
+                }, 1000);
             },
 
             cancel: () => { },
@@ -245,6 +252,7 @@ export class MyPlugin {
 
         var name = prompt("Name of data file? [a-z0-9_]?");
         if (name == null) {
+            // Beware, this can happen for https://www.chromestatus.com/feature/5637107137642496
             return; // cancelled. 
         }
 
