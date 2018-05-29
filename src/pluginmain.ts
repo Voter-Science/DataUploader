@@ -62,9 +62,9 @@ export class MyPlugin {
         });
     }
 
-    private InitDropbox() : void {
-          // Setup dropbox button 
-          var options = {
+    private InitDropbox(): void {
+        // Setup dropbox button 
+        var options = {
             success: (files: any) => {
                 var downloadLink = files[0].link;
 
@@ -72,7 +72,7 @@ export class MyPlugin {
                 // is still considered active when this callback is fired. 
                 // https://www.chromestatus.com/feature/5637107137642496
                 // So use a timer to def the dialog a second so that Dropbox window has closed. 
-                setTimeout ( ()=> {
+                setTimeout(() => {
                     this.onUpload(downloadLink);
                 }, 1000);
             },
@@ -116,6 +116,9 @@ export class MyPlugin {
         $("#_banner").hide();
         $("#_editor").show();
     }
+
+    private _sheetInfo : trcSheet.ISheetInfoResult;
+
     private InitAsync(): Promise<void> {
         this.pauseUi();
 
@@ -147,6 +150,7 @@ export class MyPlugin {
 
 
             return this._sheet.getInfoAsync().then(sheetInfo => {
+                this._sheetInfo= sheetInfo;
 
                 $("#_addToSheet").show();
 
@@ -230,6 +234,8 @@ export class MyPlugin {
                     }
 
 
+                    this.addSpecial(values);
+
                     if (countAdd == 0) {
                         $("#_addToSheet").hide();
                     }
@@ -238,15 +244,149 @@ export class MyPlugin {
         }).catch(showError);;
     }
 
+    private addSpecial(values: trcCompute.ISemanticDescrFull[]) {
+        if (values.length == 0) {
+            return;
+        }
+
+        // XVoted, Set this to mark who has currently voted, [Dropdown], Add it
+        var root = $("#_listSpecial");
+        root.empty();
+        {
+            var header = $("<thead>");
+            var h1 = $("<tr>");
+            var c1 = $("<td>").text("Column Name");
+            var c2 = $("<td>").text("Description");
+            var c3 = $("<td>").text("Current value?");
+
+            var c4 = $("<td>").text("Semantic");
+            var c5 = $("<td>").text("Ops");
+            h1.append(c1);
+            h1.append(c2);
+            h1.append(c3);
+            h1.append(c4);
+            h1.append(c5);
+            header.append(h1);
+            root.append(header);
+        }
+
+        var tr1 = this.addSpecialRow("XVoted", "who has currently voted", values);
+        var tr2 = this.addSpecialRow("XTargetPri", "mark targetted voters", values);
+        root.append(tr1);
+        root.append(tr2);
+    }
+
+    private addSpecialRow(
+        columnName: string,
+        columnDescr: string,
+        values: trcCompute.ISemanticDescrFull[]
+    ): JQuery<HTMLElement>  // returns a <tr>
+    {
+        var tr = $("<tr>");
+
+        var td1 = $("<td>").text(columnName);
+        var td2 = $("<td>").text(columnDescr);
+
+        var td3 = $("<td>"); // Current value  
+        {
+            var cs = this._sheetInfo.Columns;
+
+            var str : string = "(not used)";
+            for (var i in cs) {
+                var c = cs[i];
+        
+                if (c.Name == columnName)
+                {
+                    str = c.Expression;
+                    if (!str) 
+                    {
+                        str = c.Semantic;
+                    }           
+                    if (!str) {
+                        str = "(unknown)";
+                    }    
+                    break;                         
+                }    
+            }
+            td3.text(str);  
+        }
+
+        var td4 = $("<td>"); // Option list 
+
+        {
+            var sel = $("<select>").attr("id", "add_" + columnName);
+            sel.append($("<option>").text("(please select)"));
+
+            for (var i in values) {
+                var val: string = values[i].Name;
+                var opt = $("<option>").val(val).text(val);
+                sel.append(opt);
+            }
+            td4.append(sel);
+        }
+
+        var td5 = $("<td>");
+        var btn = this.addSpecialButton(columnName);
+        td5.append(btn);
+
+
+        tr.append(td1);
+        tr.append(td2);
+        tr.append(td3);
+        tr.append(td4);
+        tr.append(td5);
+
+        return tr;
+    }
+
+    private addSpecialButton(columnName: string)
+        : JQuery<HTMLElement> // returns a button 
+    {
+        var btn = $("<button/>").addClass("btn").text("Add").click(() => {
+            // Get semanticName from currently selected
+            var semanticName: string = <string>$("#add_" + columnName).val();
+            if (!semanticName || semanticName.length == 0) {
+                alert("Please select a semantic");
+                return;
+            }
+
+            var ok = confirm("Do you want to add '" + columnName + "' as '" + semanticName + "'.");
+            if (!ok) {
+                return;
+            }
+
+            var questions: trcSheet.IMaintenanceAddColumn[] = [];
+            questions.push(
+                {
+                    ColumnName: columnName,
+                    Description: null,
+                    PossibleValues: null,
+                    SemanticName: semanticName,
+                }
+            );
+
+            var admin = new trcSheet.SheetAdminClient(this._sheet);
+
+            admin.postOpAddQuestionAsync(questions).then(
+                () => {
+                    return this.InitAsync();
+                }
+            ).catch(showError);
+        });
+
+        return btn;
+    }
+
+
     // When they uploaded from the dropbox selector. 
     public onUpload(url: string): void {
         // https://www.dropbox.com/developers/chooser
         // "Direct" links - you can do a GET and get the contents, but they expire after 4 hours. 
         // Need a "preview" link, which will return a 302 (and do an auth check), 
         // and the new URL will get the contents 
-        
+
         // DL=0 means preview, DL=1 will get a direct link 
-        
+
         // Change the dl=0  to dl=1  
         url = url.replace("dl=0", "dl=1");
 
@@ -286,14 +426,12 @@ export class MyPlugin {
 
 
         // If this is voted, then use well-k
-        if (last.indexOf("voted") !== -1)
-        {
+        if (last.indexOf("voted") !== -1) {
             var msg = "Do you want to use '" + last + "' as list of who has voted? (This will rename the column to 'XVoted') ";
-            if (confirm(msg))
-            {
+            if (confirm(msg)) {
                 // Use special column name
                 last = "XVoted";
-            }        
+            }
         }
         return last;
     }
@@ -341,10 +479,8 @@ export class MyPlugin {
         ).catch(showError);
     }
 
-    private SafeToString(val : any) : string 
-    {
-        if (!val) 
-        {
+    private SafeToString(val: any): string {
+        if (!val) {
             return "n/a";
         }
         return val.toLocaleString();
