@@ -140,10 +140,13 @@ export class MyPlugin {
                 var c3 = $("<td>").text("Status");
                 var c4 = $("<td>").text("Add to sheet?");
                 var c5 = $("<td>").text("Ops");
+                var c6 = $("<td>").text("Sharing");
                 h1.append(c1);
                 h1.append(c2);
                 h1.append(c3);
                 h1.append(c4);
+                h1.append(c5);
+                h1.append(c6);
                 header.append(h1);
                 root.append(header);
             }
@@ -226,8 +229,9 @@ export class MyPlugin {
                                 c5.append(btn);
                             }
 
+                            var c6 = $("<td>");
                             if (descr.Own) {
-                                var btn = $("<button/>").addClass("btn").addClass(".btn-warning").text("Share").click(() => {
+                                var btn = $("<button/>").addClass("btn").addClass(".btn-warning").text("Share With..").click(() => {
                                     var newUser = prompt("Email address of user to share with?");
                                     if (newUser != null)
                                     {
@@ -236,7 +240,11 @@ export class MyPlugin {
                                         }).catch(showError);
                                     }                                    
                                 });
-                                c5.append(btn);
+                                
+                                c6.append(btn);
+
+                                // Get current users 
+                                this.appendCurrentUsers(sname, c6);
                             }
 
 
@@ -245,6 +253,7 @@ export class MyPlugin {
                             row.append(c3);
                             row.append(c4);
                             row.append(c5);
+                            row.append(c6);
                             root.append(row);
                         })(descr2);
                     }
@@ -258,6 +267,18 @@ export class MyPlugin {
                 });
             });
         }).catch(showError);;
+    }
+
+
+    // This is many queries (1 per semantic), and it doesn't block the UI, so do it async.
+    private appendCurrentUsers(sname : string, root : JQuery<HTMLElement>) : void {
+        this._sc.getAllUsersWithAccessAsync(sname).then( userDetails => {
+            for(var userDetail of userDetails)
+            {
+                var e2 = $("<div>").text("[" + userDetail.Email +"] ");
+                root.append(e2);
+            }
+        });
     }
 
     private addSpecial(values: trcCompute.ISemanticDescrFull[]) {
@@ -288,8 +309,10 @@ export class MyPlugin {
 
         var tr1 = this.addSpecialRow("XVoted", "who has currently voted", values);
         var tr2 = this.addSpecialRow("XTargetPri", "mark targetted voters", values);
+        var tr3 = this.addSpecialRow("Party", "party id", values);
         root.append(tr1);
         root.append(tr2);
+        root.append(tr3);
     }
 
     private addSpecialRow(
