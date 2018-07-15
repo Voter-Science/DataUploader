@@ -117,7 +117,7 @@ export class MyPlugin {
         $("#_editor").show();
     }
 
-    private _sheetInfo : trcSheet.ISheetInfoResult;
+    private _sheetInfo: trcSheet.ISheetInfoResult;
 
     private InitAsync(): Promise<void> {
         this.pauseUi();
@@ -150,7 +150,7 @@ export class MyPlugin {
 
 
             return this._sheet.getInfoAsync().then(sheetInfo => {
-                this._sheetInfo= sheetInfo;
+                this._sheetInfo = sheetInfo;
 
                 $("#_addToSheet").show();
 
@@ -203,13 +203,8 @@ export class MyPlugin {
                                 c4.append(chk);
                                 countAdd++;
                             }
-
-                            var btn = $("<button/>").addClass("btn").text("Refresh").click(() => {
-                                this._sc.postRefreshAsync(sname).then(() => {
-                                    // Loop until 200? 
-                                    return this.InitAsync();
-                                }).catch(showError);
-                            });
+                            
+                            var c5 = $("<td>");
                             var btn2 = $("<button/>").addClass("btn").addClass("btn-danger").text("Delete").click(() => {
                                 var r = confirm("Are you sure you want to delete: " + sname);
                                 if (r == true) {
@@ -219,9 +214,30 @@ export class MyPlugin {
                                     }).catch(showError);
                                 }
                             });
-                            var c5 = $("<td>");
-                            c5.append(btn);
                             c5.append(btn2);
+                            
+                            if (descr.Own) {
+                                var btn = $("<button/>").addClass("btn").text("Refresh").click(() => {
+                                    this._sc.postRefreshAsync(sname).then(() => {
+                                        // Loop until 200? 
+                                        return this.InitAsync();
+                                    }).catch(showError);
+                                });
+                                c5.append(btn);
+                            }
+
+                            if (descr.Own) {
+                                var btn = $("<button/>").addClass("btn").addClass(".btn-warning").text("Share").click(() => {
+                                    var newUser = prompt("Email address of user to share with?");
+                                    if (newUser != null)
+                                    {
+                                        this._sc.postShareAsync(sname, newUser).then( ()=> {
+                                            alert("Success: user now has access to this semantic.");
+                                        }).catch(showError);
+                                    }                                    
+                                });
+                                c5.append(btn);
+                            }
 
 
                             row.append(c1);
@@ -291,24 +307,22 @@ export class MyPlugin {
         {
             var cs = this._sheetInfo.Columns;
 
-            var str : string = "(not used)";
+            var str: string = "(not used)";
             for (var i in cs) {
                 var c = cs[i];
-        
-                if (c.Name == columnName)
-                {
+
+                if (c.Name == columnName) {
                     str = c.Expression;
-                    if (!str) 
-                    {
+                    if (!str) {
                         str = c.Semantic;
-                    }           
+                    }
                     if (!str) {
                         str = "(unknown)";
-                    }    
-                    break;                         
-                }    
+                    }
+                    break;
+                }
             }
-            td3.text(str);  
+            td3.text(str);
         }
 
         var td4 = $("<td>"); // Option list 
