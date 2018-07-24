@@ -155,6 +155,14 @@ export class MyPlugin {
             return this._sheet.getInfoAsync().then(sheetInfo => {
                 this._sheetInfo = sheetInfo;
 
+                if (!!sheetInfo.ParentId)  
+                {
+                    // Only allow uploader on top-level sheets. 
+                    var msg = "Data Uploader only allowed on top-level campaign sheets";
+                    alert (msg);
+                    throw msg;
+                }
+
                 $("#_addToSheet").show();
 
                 // Track which semantics the current sheet is already using. 
@@ -266,7 +274,7 @@ export class MyPlugin {
                     }
                 });
             });
-        }).catch(showError);;
+        }); // caller will catch errors. 
     }
 
 
@@ -285,6 +293,8 @@ export class MyPlugin {
         if (values.length == 0) {
             return;
         }
+
+        // Can only edit these if we're the top sheet. 
 
         // XVoted, Set this to mark who has currently voted, [Dropdown], Add it
         var root = $("#_listSpecial");
@@ -310,9 +320,13 @@ export class MyPlugin {
         var tr1 = this.addSpecialRow("XVoted", "who has currently voted", values);
         var tr2 = this.addSpecialRow("XTargetPri", "mark targetted voters", values);
         var tr3 = this.addSpecialRow("Party", "party id", values);
+        var tr4 = this.addSpecialRow("Cellphone", "Phone numbers", values);
+        var tr5 = this.addSpecialRow("History", "likeliness to vote", values);
         root.append(tr1);
         root.append(tr2);
         root.append(tr3);
+        root.append(tr4);
+        root.append(tr5);
     }
 
     private addSpecialRow(
