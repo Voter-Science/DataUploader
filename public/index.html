@@ -18,10 +18,8 @@
     // Common error handler
     function showError(error) {
         var msg = error.Message; // Commonly a user error. 
-        if (!msg) {
-
-            msg = error;
-
+        if (!!msg) {
+            error = msg;
         }
         $("#_errors").html("<pre style='color:red'>Error on load:" + error + "</pre>");
         $("#_errorbtn").show();
@@ -90,7 +88,7 @@
             <div class="panel panel-default">
                 <div class="panel-heading">Upload a new semantic</div>
                 <div class="panel-body">
-                    <p>Upload a new semantic from your dropbox.</p>
+                    <p>Upload a new semantic from your dropbox. Be sure it's in the correct format.</p>
                     <div class="row">
                         <div class="col-md-8">
                             <div id="dropboxButton"></div>

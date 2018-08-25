@@ -32,6 +32,30 @@ declare var Dropbox: any; // from dropbox inport
 //   p.catch(showError);
 declare var showError: (error: any) => void; // error handler defined in index.html
 
+// https://www.dropbox.com/developers/chooser
+interface IDropbboxFile
+{
+    id : string;  // Unique ID for the file, compatible with Dropbox API v2.
+    name : string; // name of the file, "filename.txt",
+
+    // URL to access the file, which varies depending on the linkType specified when the
+    // Chooser was triggered.
+    link : string; //  "https://...",
+
+     // Size of the file in bytes.
+     bytes: number; // 464,
+
+     // URL to a 64x64px icon for the file based on the file's extension.
+     icon: string; //  "https://...",
+ 
+     // A thumbnail URL generated when the user selects images and videos.
+     // If the user didn't select an image or video, no thumbnail will be included.
+     thumbnailLink:  string; // "https://...?bounding_box=75&mode=fit",
+ 
+     // Boolean, whether or not the file is actually a directory
+     isDir: boolean; // false,
+}
+
 export class MyPlugin {
     private _sheet: trcSheet.SheetClient;
     private _pluginClient: plugin.PluginClient;
@@ -65,15 +89,17 @@ export class MyPlugin {
     private InitDropbox(): void {
         // Setup dropbox button 
         var options = {
-            success: (files: any) => {
-                var downloadLink = files[0].link;
+            success: (files: IDropbboxFile[]) => {
+                var file =  files[0];
+                var downloadLink = file.link;
+                var filename = file.name;
 
                 // On Chrome, current page is not "active tab", since the dropbox chooser dialog 
                 // is still considered active when this callback is fired. 
                 // https://www.chromestatus.com/feature/5637107137642496
                 // So use a timer to def the dialog a second so that Dropbox window has closed. 
                 setTimeout(() => {
-                    this.onUpload(downloadLink);
+                    this.onUpload(downloadLink, filename);
                 }, 1000);
             },
 
@@ -430,7 +456,7 @@ export class MyPlugin {
 
 
     // When they uploaded from the dropbox selector. 
-    public onUpload(url: string): void {
+    public onUpload(url: string, filename : string): void {
         // https://www.dropbox.com/developers/chooser
         // "Direct" links - you can do a GET and get the contents, but they expire after 4 hours. 
         // Need a "preview" link, which will return a 302 (and do an auth check), 
@@ -441,7 +467,17 @@ export class MyPlugin {
         // Change the dl=0  to dl=1  
         url = url.replace("dl=0", "dl=1");
 
-        var name = prompt("Name of data file? [a-z0-9_]?");
+        // https://stackoverflow.com/questions/4250364/how-to-trim-a-file-extension-from-a-string-in-javascript
+        var defaultName = filename.toLocaleLowerCase().replace(/\.[^/.]+$/, ""); // remove extension 
+
+        try {
+            trcSheet.Validators.ValidateColumnName(defaultName);
+        } catch {
+            // Don't suggest a default name that's illegal.
+            defaultName = undefined;
+        }
+
+        var name = prompt("Short name of data file? [a-z0-9_]?", defaultName);
         if (name == null) {
             // Beware, this can happen for https://www.chromestatus.com/feature/5637107137642496
             return; // cancelled. 
