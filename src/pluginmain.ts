@@ -374,7 +374,7 @@ export class MyPlugin {
             for (var i in cs) {
                 var c = cs[i];
 
-                if (c.Name == columnName) {
+                if (c.Name.toUpperCase() == columnName.toUpperCase()) {
                     str = c.Expression;
                     if (!str) {
                         str = c.Semantic;
