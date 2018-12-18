@@ -197,7 +197,7 @@ export class MyPlugin {
         var keys = this.GetUserIds(values);
         keys.forEach((userId: string) => {
             all.push(userClient.getUserInfoAsync(userId).then(details => {
-                alert(userId + " =" + details.Email);
+                //alert(userId + " =" + details.Email);
                 map[userId] = details.Email;
             }));
         });
