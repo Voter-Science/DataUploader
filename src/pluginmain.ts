@@ -32,28 +32,36 @@ declare var Dropbox: any; // from dropbox inport
 //   p.catch(showError);
 declare var showError: (error: any) => void; // error handler defined in index.html
 
+// Map from UserId to user name
+export interface IUserId2NameMap  {
+    [colName: string]: string;
+}
+
 // https://www.dropbox.com/developers/chooser
-interface IDropbboxFile
-{
-    id : string;  // Unique ID for the file, compatible with Dropbox API v2.
-    name : string; // name of the file, "filename.txt",
+interface IDropbboxFile {
+    id: string;  // Unique ID for the file, compatible with Dropbox API v2.
+    name: string; // name of the file, "filename.txt",
 
     // URL to access the file, which varies depending on the linkType specified when the
     // Chooser was triggered.
-    link : string; //  "https://...",
+    link: string; //  "https://...",
 
-     // Size of the file in bytes.
-     bytes: number; // 464,
+    // Size of the file in bytes.
+    bytes: number; // 464,
 
-     // URL to a 64x64px icon for the file based on the file's extension.
-     icon: string; //  "https://...",
- 
-     // A thumbnail URL generated when the user selects images and videos.
-     // If the user didn't select an image or video, no thumbnail will be included.
-     thumbnailLink:  string; // "https://...?bounding_box=75&mode=fit",
- 
-     // Boolean, whether or not the file is actually a directory
-     isDir: boolean; // false,
+    // URL to a 64x64px icon for the file based on the file's extension.
+    icon: string; //  "https://...",
+
+    // A thumbnail URL generated when the user selects images and videos.
+    // If the user didn't select an image or video, no thumbnail will be included.
+    thumbnailLink: string; // "https://...?bounding_box=75&mode=fit",
+
+    // Boolean, whether or not the file is actually a directory
+    isDir: boolean; // false,
+}
+
+function Per(a: number, b: number): string {
+    return (a * 100 / b).toFixed(1) + "%";
 }
 
 export class MyPlugin {
@@ -90,7 +98,7 @@ export class MyPlugin {
         // Setup dropbox button 
         var options = {
             success: (files: IDropbboxFile[]) => {
-                var file =  files[0];
+                var file = files[0];
                 var downloadLink = file.link;
                 var filename = file.name;
 
@@ -145,6 +153,93 @@ export class MyPlugin {
 
     private _sheetInfo: trcSheet.ISheetInfoResult;
 
+    // Return the userId in a semantic: users/{userId}/{name} 
+    // Else return undefined  if no match
+    private getUserIdFromName(sname: string): string {
+        // Debug regex here: https://www.w3schools.com/jsref/tryit.asp?filename=tryjsref_regexp_exec
+        // Beware, you can't share a regex instance - it can lead to non-deterministic 
+        // matching behavior. 
+        var _myRegexp = /users\/(.+)\/(.+)/g;
+        var match = _myRegexp.exec(sname);
+        if (!!match && match.length > 1) {
+            return match[1];
+        }
+        return undefined;
+    }
+
+    // Given list of semantics, get the unique userIds in their names.     
+    private GetUserIds(values: trcCompute.ISemanticDescrFull[]): string[] {
+
+        var userIds: any = {};
+
+        // Get unique set of userIds
+        for (var i in values) {
+            var descr = values[i];
+            var userId: string = this.getUserIdFromName(descr.Name);
+            if (!!userId) {
+                userIds[userId] = true;
+            }
+        }
+
+        var keys = Object.keys(userIds);
+        return keys;
+    }
+
+    // Given list of semantics, compute a map of userId to ownerName.     
+    // return {userId} ---> UserName
+    private GetUserList(values: trcCompute.ISemanticDescrFull[]): Promise<IUserId2NameMap> {
+
+        var userClient = new core.UserClient(this._sheet._http);
+
+        var all: Promise<void>[] = [];
+        var map: IUserId2NameMap = {};
+
+        var keys = this.GetUserIds(values);
+        keys.forEach((userId: string) => {
+            all.push(userClient.getUserInfoAsync(userId).then(details => {
+                alert(userId + " =" + details.Email);
+                map[userId] = details.Email;
+            }));
+        });
+
+        return Promise.all(all).then(
+            () => map);
+    }
+
+    private getDetailString(descr: trcCompute.ISemanticDescrFull): string {
+        var t = "";
+        var s = descr.Summary;
+        if (!s) {
+            return null;
+        }
+        t += "Details for: " + descr.Name;
+
+        t +=
+            "Rows         : " + s.TotalRows.toLocaleString() + "\n" +
+            "Non Blank    : " + s.NonBlank.toLocaleString() + " (" + Per(s.NonBlank, s.TotalRows) + ") \n" +
+            "Unique Values: " + s.UniqueVal + "\n";
+
+        if (!!s.Average && !!s.Sum) {
+            t +=
+                "Average: " + s.Average.toLocaleString() + "\n" +
+                "Sum    : " + s.Sum.toLocaleString() + "\n";
+        };
+        if (!!s.Histogram) {
+            t += "-----\nHistogram:\n";
+            var h = s.Histogram;
+            for (var key in h) {
+                if (h.hasOwnProperty(key)) {
+                    var count = h[key];
+                    if (key.length == 0) {
+                        key = "(blank)";
+                    }
+                    t += "  " + key + " : " + count.toLocaleString() + " (" + Per(count, s.TotalRows) + ")\n";
+                }
+            }
+        }
+        return t;
+    }
+
     private InitAsync(): Promise<void> {
         this.pauseUi();
 
@@ -181,11 +276,10 @@ export class MyPlugin {
             return this._sheet.getInfoAsync().then(sheetInfo => {
                 this._sheetInfo = sheetInfo;
 
-                if (!!sheetInfo.ParentId)  
-                {
+                if (!!sheetInfo.ParentId) {
                     // Only allow uploader on top-level sheets. 
                     var msg = "Data Uploader only allowed on top-level campaign sheets";
-                    alert (msg);
+                    alert(msg);
                     throw msg;
                 }
 
@@ -214,102 +308,144 @@ export class MyPlugin {
                     }
                     $("#_panel2").show();
 
-                    var countAdd = 0;
-                    // $$$  Sort alphabetically? 
-                    for (var i in values) {
-                        var descr2 = values[i];
+                    return this.GetUserList(values)
+                        .then((userMap) => {
+                            var countAdd = 0;
+                            // $$$  Sort alphabetically? 
+                            for (var i in values) {
+                                var descr2 = values[i];
+                                var [row, inc] = this.foreachDescr(descr2, used, userMap);
 
-                        ((descr) => {
-                            var sname = descr.Name;
+                                countAdd += inc;
 
-                            var row = $("<tr>");
-                            var c1 = $("<td>").text(sname);
-                            var c2 = $("<td>").text(this.SafeToString(descr.NumberRows));
-                            var c3 = $("<td>").text(this.getStatusText(descr));
-
-                            var usedBycolumnName = used[descr.Name];
-                            if (!!usedBycolumnName) {
-                                var c4 = $("<td>").text("(included as " + usedBycolumnName + ")");
-                            } else {
-                                // Create a checkbox for adding... 
-                                // var c4 = $("<td>").text("Add it!");
-
-                                var chk = $("<input class='myx' type='checkbox' />").val(sname).text('Add');
-
-                                var c4 = $("<td>");
-                                c4.append(chk);
-                                countAdd++;
-                            }
-                            
-                            var c5 = $("<td>");
-                            var btn2 = $("<button/>").addClass("btn").addClass("btn-danger").text("Delete").click(() => {
-                                var r = confirm("Are you sure you want to delete: " + sname);
-                                if (r == true) {
-                                    this._sc.deleteAsync(sname).then(() => {
-                                        // Loop until 200? 
-                                        return this.InitAsync();
-                                    }).catch(showError);
-                                }
-                            });
-                            c5.append(btn2);
-                            
-                            if (descr.Own) {
-                                var btn = $("<button/>").addClass("btn").text("Refresh").click(() => {
-                                    this._sc.postRefreshAsync(sname).then(() => {
-                                        // Loop until 200? 
-                                        return this.InitAsync();
-                                    }).catch(showError);
-                                });
-                                c5.append(btn);
-                            }
-
-                            var c6 = $("<td>");
-                            if (descr.Own) {
-                                var btn = $("<button/>").addClass("btn").addClass(".btn-warning").text("Share With..").click(() => {
-                                    var newUser = prompt("Email address of user to share with?");
-                                    if (newUser != null)
-                                    {
-                                        this._sc.postShareAsync(sname, newUser).then( ()=> {
-                                            alert("Success: user now has access to this semantic.");
-                                        }).catch(showError);
-                                    }                                    
-                                });
-                                
-                                c6.append(btn);
-
-                                // Get current users 
-                                this.appendCurrentUsers(sname, c6);
+                                root.append(row);
                             }
 
 
-                            row.append(c1);
-                            row.append(c2);
-                            row.append(c3);
-                            row.append(c4);
-                            row.append(c5);
-                            row.append(c6);
-                            root.append(row);
-                        })(descr2);
-                    }
+                            this.addSpecial(values);
 
-
-                    this.addSpecial(values);
-
-                    if (countAdd == 0) {
-                        $("#_addToSheet").hide();
-                    }
+                            if (countAdd == 0) {
+                                $("#_addToSheet").hide();
+                            }
+                        });
                 });
             });
         }); // caller will catch errors. 
     }
 
 
+    // Callback in foreach loop for each descr
+    private foreachDescr(
+        descr: trcCompute.ISemanticDescrFull,
+        used: any,
+        userMap: IUserId2NameMap, // userId:string --> userName string 
+    ): [JQuery<HTMLElement>, number] {
+
+        var countAdd = 0;
+        var sname = descr.Name;
+
+        var sname2 = sname;
+        var userId = this.getUserIdFromName(sname);
+        if (!!userId) {
+            var userName = userMap[userId];
+            if (!!userName) {
+                sname2 += " (" + userName + ")";
+            }
+        }
+
+        var row = $("<tr>");
+        var c1 = $("<td>").text(sname2);
+
+        // Name may be "users/{userId}/name". 
+        // Infer the UserId to help with identifying owner. 
+
+        var c2 = $("<td>");
+        var c2Text = this.SafeToString(descr.NumberRows);
+
+        if (!!descr.Summary) {
+            var c2Link = $("<a>").text(c2Text);
+            c2.append(c2Link);
+            c2.click(() => {
+                var text = this.getDetailString(descr);
+                alert(text);
+            });
+        } else {
+            c2.text(c2Text);
+        }
+
+        var c3 = $("<td>").text(this.getStatusText(descr));
+
+        var usedBycolumnName = used[descr.Name];
+        if (!!usedBycolumnName) {
+            var c4 = $("<td>").text("(included as " + usedBycolumnName + ")");
+        } else {
+            // Create a checkbox for adding... 
+            // var c4 = $("<td>").text("Add it!");
+
+            var chk = $("<input class='myx' type='checkbox' />").val(sname).text('Add');
+
+            var c4 = $("<td>");
+            c4.append(chk);
+            countAdd++;
+        }
+
+        var c5 = $("<td>");
+        var btn2 = $("<button/>").addClass("btn").addClass("btn-danger").text("Delete").click(() => {
+            var r = confirm("Are you sure you want to delete: " + sname);
+            if (r == true) {
+                this._sc.deleteAsync(sname).then(() => {
+                    // Loop until 200? 
+                    return this.InitAsync();
+                }).catch(showError);
+            }
+        });
+        c5.append(btn2);
+
+        if (descr.Own) {
+            var btn = $("<button/>").addClass("btn").text("Refresh").click(() => {
+                this._sc.postRefreshAsync(sname).then(() => {
+                    // Loop until 200? 
+                    return this.InitAsync();
+                }).catch(showError);
+            });
+            c5.append(btn);
+        }
+
+        var c6 = $("<td>");
+        if (descr.Own) {
+            var btn = $("<button/>").addClass("btn").addClass(".btn-warning").text("Share With..").click(() => {
+                var newUser = prompt("Email address of user to share with?");
+                if (newUser != null) {
+                    this._sc.postShareAsync(sname, newUser).then(() => {
+                        alert("Success: user now has access to this semantic.");
+                    }).catch(showError);
+                }
+            });
+
+            c6.append(btn);
+
+            // Get current users 
+            this.appendCurrentUsers(sname, c6);
+        }
+
+
+        row.append(c1);
+        row.append(c2);
+        row.append(c3);
+        row.append(c4);
+        row.append(c5);
+        row.append(c6);
+
+        //root.append(row);
+        return [row, countAdd];
+    }
+
+
     // This is many queries (1 per semantic), and it doesn't block the UI, so do it async.
-    private appendCurrentUsers(sname : string, root : JQuery<HTMLElement>) : void {
-        this._sc.getAllUsersWithAccessAsync(sname).then( userDetails => {
-            for(var userDetail of userDetails)
-            {
-                var e2 = $("<div>").text("[" + userDetail.Email +"] ");
+    private appendCurrentUsers(sname: string, root: JQuery<HTMLElement>): void {
+        this._sc.getAllUsersWithAccessAsync(sname).then(userDetails => {
+            for (var userDetail of userDetails) {
+                var e2 = $("<div>").text("[" + userDetail.Email + "] ");
                 root.append(e2);
             }
         });
@@ -456,7 +592,7 @@ export class MyPlugin {
 
 
     // When they uploaded from the dropbox selector. 
-    public onUpload(url: string, filename : string): void {
+    public onUpload(url: string, filename: string): void {
         // https://www.dropbox.com/developers/chooser
         // "Direct" links - you can do a GET and get the contents, but they expire after 4 hours. 
         // Need a "preview" link, which will return a 302 (and do an auth check), 
